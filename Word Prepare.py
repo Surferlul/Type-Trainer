@@ -5,11 +5,11 @@ if srt:
     srt = int(srt)
 else:
     srt=0
-fl = input("file with words (default:./.words)")
+fl = input("file with words (default:./words)")
 if fl:
     pass
 else:
-    fl=".words"
+    fl="words"
 otp = input("output save-file (default:./.save)")
 if otp:
     pass
