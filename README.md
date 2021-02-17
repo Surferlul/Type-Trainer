@@ -28,5 +28,5 @@ If the text is flashing please open an issue, i used the flashing formated text 
 
 the lower the priorty value the more likeley the word will be pickes
 
-<text>As a refferece how much the score is worth:</text>
-<text>I've been touch typing for about a week, got an average of 1/3 seconds per character with 1900 total attempts -> 5000</text>
+As a refferece how much the score is worth:<br />
+I've been touch typing for about a week, got an average of 1/3 seconds per character with 1900 total attempts -> 5000
