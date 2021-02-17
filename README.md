@@ -17,7 +17,7 @@ If the text is flashing please open an issue, i used the flashing formated text 
  - average seconds per character (Calculated by '(999 * old_speed + speed_for_character) / 1000')
  - average seconds per character for current word (Calculated by '(19 * old_speed + new_speed) / 20')
  - second per character for current word (starting from as soon as you enter the first character, ending as soon as you swich to next word. If you haven't entered the first character yet it displays the final speed of the last word)
- - Score (calculated by 'average of the avetage seconds per character of all used words ^ 3 * the square root of your attempts')
+ - Score (calculated by 'average of the avetage seconds per character of all used words ^ 3 * the square root of total attempted words')
 
 ### Middle from left to right:
 
