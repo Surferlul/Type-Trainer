@@ -1,5 +1,7 @@
 # Type-Trainer
 
+You need Python 3 to run these programs
+
 If the text is flashing please open an issue, i used the flashing formated text because it didn't flash in my terminal and had a nice color
 
 ## Usage
