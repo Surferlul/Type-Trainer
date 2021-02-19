@@ -11,7 +11,7 @@ from os.path import isfile
 if not isfile(".conf"):
     print ("There is no config! Creating config...")
     with open(".conf", "w") as cnf:
-        cnf.write("0.5;0;0")
+        cnf.write("0;0;0")
 
 with open("special characters", "r", encoding="utf8") as s:
     sc = eval(s.read())
@@ -37,9 +37,31 @@ with open(".save", "r", encoding="utf8") as s:
 
 with open(".conf", "r") as f:
     r = f.read().split(";")
-    spl = float(r[0])
-    tr = int(r[1])
+    av_speed = float(r[0])
+    counter = int(r[1])
     score = float(r[2])
+
+def round2(num):
+    return int(num * 100) /100
+
+def my_t2a(text, size, do_round=True):
+    if size == 0:
+        font = "universe"
+    elif size == 1:
+        font = "bulbhead"
+    
+    if isinstance(text, int):
+        text = str(text)
+    elif isinstance(text, float):
+        if do_round:
+            text = str(round2(text))
+        else:
+            text = str(text)
+    elif not isinstance(text, str):
+        raise TypeError
+    
+    return text2art(text, font).split("\n")
+    
 
 def strt_scrn():
     stdscr = initscr()
@@ -47,35 +69,50 @@ def strt_scrn():
     return stdscr
 
 def give_word():
-    global tr
-    while 0 not in [tr % i for i in sv["priority"]]:
-        tr+=1
-    return [tr % i for i in sv["priority"]].index(0)
+    global counter
+    while 0 not in [counter % i for i in sv["priority"]]:
+        counter+=1
+    return [counter % i for i in sv["priority"]].index(0)
 
-def create_header(Tm, Tm2, av, scr, amount, counter, pp, cp):
+def create_header(av_speed_ART, spl_prev_ART, av_speed_word_ART, score_ART, amount, counter, past_priority, current_priority):
     global stdscr
+    counter = str(counter)
+    amount = str(amount)
+    current_priority = str(current_priority)
+    past_priority = str(past_priority)
     stdscr.addstr("esc - menu", curses.A_BLINK)
     stdscr.addstr("\n\n")
     
-    for i in range(len(Tm2)):
+    for i in range(len(spl_prev_ART)):
         stdscr.addstr("   ")
-        stdscr.addstr(Tm[i], curses.A_BLINK)
-        stdscr.addstr(" " * (32 - len(Tm[i])))
-        stdscr.addstr(av[i], curses.A_BLINK)
-        stdscr.addstr(" " * (32 - len(av[i])))
-        stdscr.addstr(Tm2[i], curses.A_BLINK)
-        stdscr.addstr(" " * (32 - len(Tm2[i])))
-        stdscr.addstr(scr[i] + "\n", curses.A_BLINK)
+        stdscr.addstr(av_speed_ART[i], curses.A_BLINK)
+        stdscr.addstr(" " * (32 - len(av_speed_ART[i])))
+        stdscr.addstr(av_speed_word_ART[i], curses.A_BLINK)
+        stdscr.addstr(" " * (32 - len(av_speed_word_ART[i])))
+        stdscr.addstr(spl_prev_ART[i], curses.A_BLINK)
+        stdscr.addstr(" " * (32 - len(spl_prev_ART[i])))
+        stdscr.addstr(score_ART[i] + "\n", curses.A_BLINK)
     
     stdscr.addstr("\n   "+ "Total: ")
     stdscr.addstr(amount, curses.A_BLINK)
     stdscr.addstr(" " * (8 - len(amount))+ "Pos: ")
     stdscr.addstr(counter, curses.A_BLINK)
     stdscr.addstr(" " * (8 - len(counter))+ "Prv Pnts: ")
-    stdscr.addstr(str(pp), curses.A_BLINK)
-    stdscr.addstr(" " * (8 - len(str(pp)))+ "Crr Pnts: ")
-    stdscr.addstr(str(cp), curses.A_BLINK)
+    stdscr.addstr(str(past_priority), curses.A_BLINK)
+    stdscr.addstr(" " * (8 - len(past_priority))+ "Crr Pnts: ")
+    stdscr.addstr(current_priority, curses.A_BLINK)
     stdscr.addstr("\n\n")
+
+def create_text(Art, y):
+    global stdscr
+    for i in Art:
+        stdscr.addstr("   ")
+        for j in range(len(i)):
+            if j<y:
+                stdscr.addstr(i[j], curses.A_BLINK)
+            else:
+                stdscr.addstr(i[j])
+        stdscr.addstr("\n")
 
 stdscr = strt_scrn()
 curses.noecho()
@@ -84,14 +121,14 @@ curses.start_color()
 curses.use_default_colors()
 
 def main(stdscr):
-    global spl
+    global av_speed
     curses.start_color()
     curses.use_default_colors()
     # Clear screen
     stdscr.clear()
     y=0
     x=""
-    pp = 0
+    past_priority = 0
     spl_prev = "----"
     active=sorted([sv["average"][i] / len(sv["words"][i]) for i in range(len(sv["average"])) if sv["average"][i] != 0])
     score = (1/(sum(active)/len(active)))**3*len(sv["words"])**0.5 
@@ -107,27 +144,25 @@ def main(stdscr):
                 if i in "äöüÖÜÄß":
                     Art.append(sc[i].split("\n"))
                 else:
-                    Art.append(text2art(i, "universe").split("\n"))
+                    Art.append(my_t2a(i, 0))
             Art2 = [[],[],[],[],[],[],[],[],[],[],[],[]]
             for i in Art:
                 for j in range(len(i)):
                     Art2[j].append(i[j])
-            amount = str(sum(sv["amount"]))
-            average = str(int(sv["average"][ind] / len(Word)*100)/100)
-            counter = str(tr)
-            cp = str(sv["priority"][ind])
-            Tm = text2art(str(int(spl*100)/100), "bulbhead").split("\n")
-            av = text2art(average, "bulbhead").split("\n")
-            Tm2 = text2art(spl_prev, "bulbhead").split("\n")
-            scr = text2art(str(int(score*100)/100), "bulbhead").split("\n")
+            Art = Art2
             
-            create_header(Tm, Tm2, av, scr, amount, counter, pp, cp)
+            amount              = sum(sv["amount"])
+            av_speed_word       = sv["average"][ind] / len(Word)
+            current_priority    = sv["priority"][ind]
+            av_speed_ART        = my_t2a(av_speed, 1)
+            av_speed_word_ART   = my_t2a(av_speed_word, 1)
+            spl_prev_ART        = my_t2a(spl_prev, 1)
+            score_ART           = my_t2a(score, 1)
             
-            for i in Art2:
-                stdscr.addstr("   ")
-                for j in range(len(i)):
-                    stdscr.addstr(i[j])
-                stdscr.addstr("\n")
+            create_header(av_speed_ART, spl_prev_ART, av_speed_word_ART, score_ART, amount, counter, past_priority, current_priority)
+            
+            create_text(Art, 0)
+            
             stdscr.refresh()
             while True:
                 x=stdscr.getkey()
@@ -143,22 +178,16 @@ def main(stdscr):
                 else:
                     continue
                 stdscr.clear()
-                Tm = text2art(str(int(spl*100)/100), "bulbhead").split("\n")
+                av_speed_ART = my_t2a(av_speed, 1)
                 if y > 1:
-                    Tm2 = text2art(str(int((end1-start)/(y-1)*100)/100), "bulbhead").split("\n")
+                    spl_prev_ART = my_t2a((end1-start)/(y-1), 1)
                 else:
-                    Tm2 = text2art("----", "bulbhead").split("\n")
+                    spl_prev_ART = my_t2a("----", 1)
                 
-                create_header(Tm, Tm2, av, scr, amount, counter, pp, cp)
+                create_header(av_speed_ART, spl_prev_ART, av_speed_word_ART, score_ART, amount, counter, past_priority, current_priority)
                 
-                for i in Art2:
-                    stdscr.addstr("   ")
-                    for j in range(len(i)):
-                        if j<y:
-                            stdscr.addstr(i[j], curses.A_BLINK)
-                        else:
-                            stdscr.addstr(i[j])
-                    stdscr.addstr("\n")
+                create_text(Art, y)
+                
                 end1 = time.time()
                 stdscr.refresh()
             if x == chr(27):
@@ -172,13 +201,13 @@ def main(stdscr):
             sv["amount"][ind] += 1
             if sv["amount"][ind] < 10:
                 sv["priority"][ind] += 101
-                pp = 100
+                past_priority = 100
             else:
-                add_p = (spl/((speed + sv["average"][ind]*9)/len(Word) + spl*90)*100)** (10 + log(sv["amount"][ind], 10)) 
+                add_p = (av_speed/((speed + sv["average"][ind]*9)/len(Word) + av_speed*90)*100)** (10 + log(sv["amount"][ind], 10)) 
                 sv["priority"][ind] = int((1 + add_p / (1 + abs(add_p)))**30/100)
-                pp = sv["priority"][ind]
-            spl_prev = str(int(speed / len(Word) * 100) / 100)
-            spl = (spl * (1000-len(Word)) + speed)/1000
+                past_priority = sv["priority"][ind]
+            spl_prev = str(round2(speed / len(Word)))
+            av_speed = (av_speed * (1000-len(Word)) + speed)/1000
         
         if x == chr(27):
             stdscr.clear()
@@ -202,7 +231,7 @@ def main(stdscr):
                 
         
         with open(".conf", "w") as s:
-            s.write(str(spl) + ";" + str(tr) + ";" + str(score))
+            s.write(str(av_speed) + ";" + str(counter) + ";" + str(score))
 
         with open(".save", "w", encoding="utf8") as s:
             sv["out"] = []
@@ -215,7 +244,7 @@ def main(stdscr):
 main(stdscr)
 
 with open(".conf", "w") as s:
-    s.write(str(spl) + ";" + str(tr) + ";" + str(score))
+    s.write(str(av_speed) + ";" + str(counter) + ";" + str(score))
 
 with open(".save", "w", encoding="utf8") as s:
     sv["out"] = []
