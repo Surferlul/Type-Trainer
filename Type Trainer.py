@@ -145,7 +145,7 @@ def main(stdscr):
                     Art.append(sc[i].split("\n"))
                 else:
                     Art.append(my_t2a(i, 0))
-            Art2 = [[],[],[],[],[],[],[],[],[],[],[],[]]
+            Art2 = [[] for i in range (12)]
             for i in Art:
                 for j in range(len(i)):
                     Art2[j].append(i[j])
