@@ -1,17 +1,32 @@
 import curses
 from curses import wrapper, initscr, endwin
-import time
-from time import sleep
+from time import sleep, time
 from art import text2art
 import locale
 from math import log
 from json import load
 from os.path import isfile
+from _thread import start_new_thread as nt 
+from copy import deepcopy
+
+
+if not isfile(".chars"):
+    print ("There is no character file! Creating .char (cause the program will be slow af otherwhise)...")
+    with open(".chars", "w", encoding="utf8") as charf:
+        univ_chars = {}
+        charf.write("{")
+        for i in range(128):
+            charf.write(str(i) + ":\"\"\"" + text2art(chr(i), "universal").replace("\"", "\\\"") + "\"\"\",")
+        charf.write("}")
+
 
 if not isfile(".conf"):
     print ("There is no config! Creating config...")
-    with open(".conf", "w") as cnf:
+    with open(".conf", "w", encoding="utf8") as cnf:
         cnf.write("0;0;0")
+
+with open(".chars", "r", encoding="utf8") as charf:
+    chars = eval(charf.read())
 
 with open("special characters", "r", encoding="utf8") as s:
     sc = eval(s.read())
@@ -41,12 +56,33 @@ with open(".conf", "r") as f:
     counter = int(r[1])
     score = float(r[2])
 
+def save_conf(av_speed, counter, score):
+    with open(".conf", "w") as s:
+        s.write(str(av_speed) + ";" + str(counter) + ";" + str(score))
+
+def save_save(sv, diff):
+    for i in diff:
+        for  j in diff[i]:
+            sv[i][j] = diff[i][j]
+    
+    with open(".save", "w", encoding="utf8") as s:
+        sv["out"] = []
+        for i in range(len(sv["words"])):
+            sv["out"].append(";".join([sv["words"][i],str(sv["amount"][i]),str(sv["average"][i]),str(sv["priority"][i])]))
+        s.write("\n".join(sv["out"]))
+
 def round2(num):
     return int(num * 100) /100
 
 def my_t2a(text, size, do_round=True):
     if size == 0:
-        font = "universe"
+        res = [[""] for i in range(12)]
+        for i in text:
+            tmp = chars[ord(i)].split("\n")
+            for j in range(len(tmp)):
+                res[j] += tmp[j]
+        
+        return res
     elif size == 1:
         font = "bulbhead"
     
@@ -122,30 +158,41 @@ curses.use_default_colors()
 
 def main(stdscr):
     global av_speed
+    diff = {}
+    for i in sv:
+        diff[i] = {}
+    sv2 = deepcopy(sv)
     curses.start_color()
     curses.use_default_colors()
-    # Clear screen
+    active = set()
+    for i in range(len(sv["average"])):
+        if sv["average"][i] != 0:
+            active.add(i)
     stdscr.clear()
     y=0
     x=""
     past_priority = 0
     spl_prev = "----"
-    active=sorted([sv["average"][i] / len(sv["words"][i]) for i in range(len(sv["average"])) if sv["average"][i] != 0])
-    score = (1/(sum(active)/len(active)))**3*len(sv["words"])**0.5 
+    score = (1/(sum([sv["average"][i] for i in active])/len(active)))**3*len(sv["words"])**0.5 
     while True:
         for no_need in range(10):
-            active=sorted([sv["average"][i] / len(sv["words"][i]) for i in range(len(sv["average"])) if sv["average"][i] != 0])
-            score = (1/(sum(active)/len(active)))**3*len(sv["words"])**0.5 
+
+            score = (1/(sum([sv["average"][i] / len(sv["words"][i]) for i in active])/len(active)))**3*len(sv["words"])**0.5 
+            
             stdscr.clear()
+            
             Art = []
             ind = give_word()
+            active.add(ind)
             Word = sv["words"][ind]
+            
             for i in Word:
                 if i in "äöüÖÜÄß":
                     Art.append(sc[i].split("\n"))
                 else:
-                    Art.append(my_t2a(i, 0))
+                    Art.append(chars[ord(i)].split("\n"))
             Art2 = [[] for i in range (12)]
+            
             for i in Art:
                 for j in range(len(i)):
                     Art2[j].append(i[j])
@@ -154,6 +201,7 @@ def main(stdscr):
             amount              = sum(sv["amount"])
             av_speed_word       = sv["average"][ind] / len(Word)
             current_priority    = sv["priority"][ind]
+            
             av_speed_ART        = my_t2a(av_speed, 1)
             av_speed_word_ART   = my_t2a(av_speed_word, 1)
             spl_prev_ART        = my_t2a(spl_prev, 1)
@@ -162,8 +210,7 @@ def main(stdscr):
             create_header(av_speed_ART, spl_prev_ART, av_speed_word_ART, score_ART, amount, counter, past_priority, current_priority)
             
             create_text(Art, 0)
-            
-            stdscr.refresh()
+           
             while True:
                 x=stdscr.getkey()
                 if y >= len(Word):
@@ -171,9 +218,9 @@ def main(stdscr):
                     break
                 if x == chr(27):
                     break
-                if x == Word[y]:
+                elif x == Word[y]:
                     if y==0:
-                        start = time.time()
+                        start = time()
                     y+=1
                 else:
                     continue
@@ -188,17 +235,18 @@ def main(stdscr):
                 
                 create_text(Art, y)
                 
-                end1 = time.time()
-                stdscr.refresh()
+                end1 = time()
             if x == chr(27):
                 break
-            end = time.time()
+            end = time()
             speed = end - start
             am = sv["amount"][ind]
             if am > 19:
                 am = 19
             sv["average"][ind] = (sv["average"][ind] * am + speed) / (am + 1)
+            diff["average"][ind] = sv["average"][ind]
             sv["amount"][ind] += 1
+            diff["amount"][ind] = sv["amount"][ind]
             if sv["amount"][ind] < 10:
                 sv["priority"][ind] += 101
                 past_priority = 100
@@ -206,7 +254,9 @@ def main(stdscr):
                 add_p = (av_speed/((speed + sv["average"][ind]*9)/len(Word) + av_speed*90)*100)** (10 + log(sv["amount"][ind], 10)) 
                 sv["priority"][ind] = int((1 + add_p / (1 + abs(add_p)))**30/100)
                 past_priority = sv["priority"][ind]
-            spl_prev = str(round2(speed / len(Word)))
+            diff["priority"][ind] = sv["priority"][ind]
+            diff["words"][ind] = sv["words"][ind]
+            spl_prev = speed / len(Word)
             av_speed = (av_speed * (1000-len(Word)) + speed)/1000
         
         if x == chr(27):
@@ -226,20 +276,9 @@ def main(stdscr):
             if x == "c":
                 y=0
                     
-            
-                    
-                
-        
-        with open(".conf", "w") as s:
-            s.write(str(av_speed) + ";" + str(counter) + ";" + str(score))
 
-        with open(".save", "w", encoding="utf8") as s:
-            sv["out"] = []
-            for i in range(len(sv["words"])):
-                sv["out"].append(";".join([sv["words"][i],str(sv["amount"][i]),str(sv["average"][i]),str(sv["priority"][i])]))
-            s.write("\n".join(sv["out"]))
-        
-    stdscr.refresh()
+        nt(save_conf, (av_speed, counter, score))
+        nt(save_save, (sv2, deepcopy(diff)))
 
 main(stdscr)
 
