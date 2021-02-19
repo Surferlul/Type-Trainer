@@ -33,5 +33,5 @@ the lower the priorty value the more likeley the word will be pickes
 As a refferece how much the score is worth:<br />
 I've been touch typing for about a week, got an average of 1/3 seconds per character with 1900 total attempts -> 5000<br />
 For english word lists see https://github.com/first20hours/google-10000-english<br />
-I got the German wordlist from [here](http://www1.udel.edu/LLL/language/deutsch/top10000.pdf). To prepare it I'd reccomend to sort the first 10224 words
+I got the German wordlist from [here](http://www1.udel.edu/LLL/language/deutsch/top10000.pdf). To prepare it I'd reccomend to take 10224 as the sort parameter
 
